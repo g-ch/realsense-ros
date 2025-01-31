@@ -60,6 +60,11 @@ Finally, Make with command ```catkin_make -DCMAKE_PREFIX_PATH="/usr/local;/usr/l
 
 # Usage Instructions
 
+### Check camera connection by
+```
+rs-enumerate-devices
+```
+
 ### Start the camera node
 To start the camera node in ROS:
 
