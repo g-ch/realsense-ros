@@ -38,14 +38,28 @@ if(SET_USER_BREAK_AT_STARTUP)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBPDEBUG")
 endif()
 
-if (WIN32)
-find_package(realsense2 CONFIG REQUIRED)
-else()
-find_package(realsense2 2.50.0)
-endif()
+# if (WIN32)
+# find_package(realsense2 CONFIG REQUIRED)
+# else()
+# find_package(realsense2 2.50.0)
+# endif()
+
+# find_package(realsense2 2.55.1)
+
+# if(NOT realsense2_FOUND)
+#     message(FATAL_ERROR "\n\n Intel RealSense SDK 2.0 is missing, please install it from https://github.com/IntelRealSense/librealsense/releases\n\n")
+# endif()
+
+set(OpenCV_DIR /usr/lib/aarch64-linux-gnu/cmake/opencv4)
+find_package(OpenCV REQUIRED)
+message(STATUS "Using OpenCV version: ${OpenCV_VERSION}")
+
+
+set(realsense2_DIR /usr/local/lib/cmake/realsense2)
+find_package(realsense2 REQUIRED)
 
 if(NOT realsense2_FOUND)
-    message(FATAL_ERROR "\n\n Intel RealSense SDK 2.0 is missing, please install it from https://github.com/IntelRealSense/librealsense/releases\n\n")
+    message(FATAL_ERROR "\n\n Intel RealSense SDK 2.0 is missing, please ensure it is installed in /usr/local\n\n")
 endif()
 
 if(NOT CMAKE_BUILD_TYPE)
@@ -60,10 +74,10 @@ else()
     message(STATUS "Create Debug Build.")
 endif()
 
-if (WIN32)
-else()
+# if (WIN32)
+# else()
 set(CMAKE_CXX_FLAGS "-fPIE -fPIC -std=c++11 -D_FORTIFY_SOURCE=2 -fstack-protector -Wformat -Wformat-security -Wall ${CMAKE_CXX_FLAGS}")
-endif()
+# endif()
 
 add_message_files(
     FILES
@@ -86,7 +100,10 @@ generate_messages(
 set(CMAKE_NO_SYSTEM_FROM_IMPORTED true)
 include_directories(
     include
-    ${realsense2_INCLUDE_DIR}
+    #${realsense2_INCLUDE_DIR}
+    /usr/local/include/librealsense2
+    /usr/include/opencv4
+    ${OpenCV_INCLUDE_DIRS}
     ${catkin_INCLUDE_DIRS}
     )
 
@@ -116,21 +133,25 @@ add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_generate_messages_cpp)
 add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
 
 target_include_directories(${PROJECT_NAME}
-  PRIVATE ${realsense2_INCLUDE_DIR})
+  #PRIVATE ${realsense2_INCLUDE_DIR})
+  PRIVATE /usr/local/include/librealsense2)
 
 target_link_libraries(${PROJECT_NAME}
-    ${realsense2_LIBRARY}
+    #${realsense2_LIBRARY}
     ${catkin_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
+    /usr/local/lib/librealsense2.so.2.51
+    /usr/local/lib/librealsense2-gl.so.2.51
+    ${OpenCV_LIBS}
     )
 
-if(WIN32)
-set_target_properties(${realsense2_LIBRARY} PROPERTIES MAP_IMPORTED_CONFIG_RELWITHDEBINFO RELEASE)
-target_link_libraries(${PROJECT_NAME}
-    realsense2::realsense2 
-    realsense2::realsense-file
-    )
-endif()
+# if(WIN32)
+# set_target_properties(${realsense2_LIBRARY} PROPERTIES MAP_IMPORTED_CONFIG_RELWITHDEBINFO RELEASE)
+# target_link_libraries(${PROJECT_NAME}
+#     realsense2::realsense2 
+#     realsense2::realsense-file
+#     )
+# endif()
 
 
 # Install nodelet library
