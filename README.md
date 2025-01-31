@@ -1,111 +1,64 @@
-# ROS Wrapper for Intel&reg; RealSense&trade; Devices
-These are packages for using Intel RealSense cameras (D400 series SR300 camera and T265 Tracking Module) with ROS.
+Realsense d405 on Dingo Jeston Orin AGX
 
-This version supports Kinetic, Melodic and Noetic distributions.
+# Info
+* On dingo Jeston the Jetpack version is 5.1.2 (check with ```sudo apt-cache show nvidia-jetpack | grep "Version"```). D405 requires librealsense (SDK) version >= 2.5.1, while on this jeston device the default apt-get version is 2.5.0. So we have to [compile from source](https://github.com/IntelRealSense/librealsense/blob/master/doc/installation_jetson.md).
+  
+# Installation
+### Install SDK
+Source code can be downloaded from [here](https://github.com/IntelRealSense/librealsense/releases). Choose version v2.51.1) and decompress. Before compiling, use command ```sudo /usr/sbin/nvpmodel -m 0``` to set the power mode to MAXN. You can check the current mode with ```sudo /usr/sbin/nvpmodel -q```.
 
-For running in ROS2 environment please switch to the [ros2 branch](https://github.com/IntelRealSense/realsense-ros/tree/ros2-beta). </br>
+Modify the script ```libuvc_installation.sh``` in ```scripts``` folder to compile v2.51.1 by comment three lines and add one
+```
+#wget https://github.com/IntelRealSense/librealsense/archive/master.zip
+#unzip ./master.zip -d .
+#cd ./librealsense-master
 
-LibRealSense2 supported version: v2.50.0 (see [realsense2_camera release notes](https://github.com/IntelRealSense/realsense-ros/releases))
+cd /home/administrator/Downloads/librealsense-2.51.1  # Change to your folder path
+```
 
-## Installation Instructions
+Compile by running the script ```libuvc_installation.sh``` in ```scripts``` folder.
+```
+sudo ./libuvc_installation.sh DBUILD_WITH_CUDA=true
+```
+### Install ROS1 wrapper
+Official Realsense ROS1 wrapper doesn't support D405. A modified wrapper from [here](https://github.com/rjwb1/realsense-ros) solved the problem. Clone the modified wrapper in your ROS workspace.
 
-### Ubuntu
-   #### Step 1: Install the ROS distribution
-   - #### Install [ROS Kinetic](http://wiki.ros.org/kinetic/Installation/Ubuntu), on Ubuntu 16.04, [ROS Melodic](http://wiki.ros.org/melodic/Installation/Ubuntu) on Ubuntu 18.04 or [ROS Noetic](http://wiki.ros.org/noetic/Installation/Ubuntu) on Ubuntu 20.04.
+Change the cmakelist as follows to use the installed SDK instead of the one preinstalled in Dingo ROS (required to run dingo driver).
 
-### Windows
-   #### Step 1: Install the ROS distribution
-   - #### Install [ROS Melodic or later on Windows 10](https://wiki.ros.org/Installation/Windows)
+* Change ```find_package(realsense2 2.50.0)``` to
+```
+set(OpenCV_DIR /usr/lib/aarch64-linux-gnu/cmake/opencv4)
+find_package(OpenCV REQUIRED)
+message(STATUS "Using OpenCV version: ${OpenCV_VERSION}")
 
+set(realsense2_DIR /usr/local/lib/cmake/realsense2)
+find_package(realsense2 REQUIRED)
+```
+* Change all ```${realsense2_INCLUDE_DIR}``` to ```/usr/local/include/librealsense2```
+* Add the following in ```include_directories```
+```
+/usr/include/opencv4
+${OpenCV_INCLUDE_DIRS}
 
-### There are 2 sources to install realsense2_camera from:
+```
+* Change ```${realsense2_LIBRARY}``` to
+```
+/usr/local/lib/librealsense2.so.2.51
+/usr/local/lib/librealsense2-gl.so.2.51
+${OpenCV_LIBS}
+```
+Then comment ```<depend>librealsense2</depend>``` in package.xml. And remove the original head file and library in the ROS folder by
+```
+sudo mv /opt/ros/noetic/include/librealsense2 /opt/ros/noetic/include/librealsense2_backup
+sudo mv /opt/ros/noetic/lib/librealsense2_XXX.so /opt/ros/noetic/lib/librealsense2_XXX_backup.so
+```
 
-* ### Method 1: The ROS distribution:
-
-  *Ubuntu*
-
-    realsense2_camera is available as a debian package of ROS distribution. It can be installed by typing:
-    
-    ```sudo apt-get install ros-$ROS_DISTRO-realsense2-camera```
-
-    This will install both realsense2_camera and its dependents, including librealsense2 library and matching udev-rules.
-
-    Notice:
-    * The version of librealsense2 is almost always behind the one availeable in RealSense&trade; official repository.
-    * librealsense2 is not built to use native v4l2 driver but the less stable RS-USB protocol. That is because the last is more general and operational on a larger variety of platforms.
-    * realsense2_description is available as a separate debian package of ROS distribution. It includes the 3D-models of the devices and is necessary for running launch files that include these models (i.e. rs_d435_camera_with_model.launch). It can be installed by typing:
-    `sudo apt-get install ros-$ROS_DISTRO-realsense2-description`
-
-  *Windows*
-
-    **Chocolatey distribution Coming soon**
-
-* ### Method 2: The RealSense&trade; distribution:
-     > This option is demonstrated in the [.travis.yml](https://github.com/intel-ros/realsense/blob/development/.travis.yml) file. It basically summerize the elaborate instructions in the following 2 steps:
-
-
-   ### Step 1: Install the latest Intel&reg; RealSense&trade; SDK 2.0
-
-    *Ubuntu*
-    
-    Install librealsense2 debian package:
-    * Jetson users - use the [Jetson Installation Guide](https://github.com/IntelRealSense/librealsense/blob/master/doc/installation_jetson.md)
-    * Otherwise, install from [Linux Debian Installation Guide](https://github.com/IntelRealSense/librealsense/blob/master/doc/distribution_linux.md#installing-the-packages)
-      - In that case treat yourself as a developer. Make sure you follow the instructions to also install librealsense2-dev and librealsense2-dkms packages.
-
-    *Windows* 
-    Install using vcpkg
-
-        `vcpkg install realsense2:x64-windows` 
-
-   #### OR
-   - #### Build from sources by downloading the latest [Intel&reg; RealSense&trade; SDK 2.0](https://github.com/IntelRealSense/librealsense/releases/tag/v2.50.0) and follow the instructions under [Linux Installation](https://github.com/IntelRealSense/librealsense/blob/master/doc/installation.md)
+Finally, Make with command ```catkin_make -DCMAKE_PREFIX_PATH="/usr/local;/usr/lib/aarch64-linux-gnu/cmake/opencv4;/opt/ros/noetic"```
 
 
-   ### Step 2: Install Intel&reg; RealSense&trade; ROS from Sources
-   - Create a [catkin](http://wiki.ros.org/catkin#Installing_catkin) workspace
-   *Ubuntu*
-   ```bash
-   mkdir -p ~/catkin_ws/src
-   cd ~/catkin_ws/src/
-   ```
-   *Windows*
-   ```batch
-   mkdir c:\catkin_ws\src
-   cd c:\catkin_ws\src
-   ```
-
-   - Clone the latest Intel&reg; RealSense&trade; ROS from [here](https://github.com/intel-ros/realsense/releases) into 'catkin_ws/src/'
-   ```bashrc
-   git clone https://github.com/IntelRealSense/realsense-ros.git
-   cd realsense-ros/
-   git checkout `git tag | sort -V | grep -P "^2.\d+\.\d+" | tail -1`
-   cd ..
-   ```
-   - Make sure all dependent packages are installed. You can check .travis.yml file for reference.
-   - Specifically, make sure that the ros package *ddynamic_reconfigure* is installed. If *ddynamic_reconfigure* cannot be installed using APT or if you are using *Windows* you may clone it into your workspace 'catkin_ws/src/' from [here](https://github.com/pal-robotics/ddynamic_reconfigure/tree/kinetic-devel)
 
 
-   ```bash
-  catkin_init_workspace
-  cd ..
-  catkin_make clean
-  catkin_make -DCATKIN_ENABLE_TESTING=False -DCMAKE_BUILD_TYPE=Release
-  catkin_make install
-  ```
-
-  *Ubuntu*
-  ```bash
-  echo "source ~/catkin_ws/devel/setup.bash" >> ~/.bashrc
-  source ~/.bashrc
-  ```
-
-  *Windows*
-  ```batch
-  devel\setup.bat
-  ```
-
-## Usage Instructions
+# Usage Instructions
 
 ### Start the camera node
 To start the camera node in ROS:
