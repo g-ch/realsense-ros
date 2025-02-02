@@ -21,8 +21,11 @@ Compile by running the script ```libuvc_installation.sh``` in ```scripts``` fold
 sudo ./libuvc_installation.sh DBUILD_WITH_CUDA=true
 ```
 ### Install ROS1 wrapper
-Official Realsense ROS1 wrapper doesn't support D405. A modified wrapper from [here](https://github.com/rjwb1/realsense-ros) solved the problem. Clone the modified wrapper in your ROS workspace.
+Official Realsense ROS1 wrapper doesn't support D405. A modified wrapper from [rjwb1](https://github.com/rjwb1/realsense-ros) solved the problem. However, on Dingo's NVIDIA Orin AGX, more needs to be modified. The final modified version is in this [repo](https://github.com/g-ch/realsense-ros/tree/dingo). Clone the modified wrapper in your ROS workspace (creating a new workspace is suggested), and then do ```catkin_make -DCMAKE_PREFIX_PATH="/usr/local;/usr/lib/aarch64-linux-gnu/cmake/opencv4;/opt/ros/noetic"```.
 
+The following shows my modification compared to [rjwb1](https://github.com/rjwb1/realsense-ros).
+
+#### Modification
 Change the cmakelist as follows to use the installed SDK instead of the one preinstalled in Dingo ROS (required to run dingo driver).
 
 * Change ```find_package(realsense2 2.50.0)``` to
